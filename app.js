@@ -1,8 +1,27 @@
 // ============================================================
+// Firebase
+// ============================================================
+
+const firebaseConfig = {
+  apiKey: "AIzaSyCfvqQWLB8NJqmaH0k2G0wPcbJJjz2Vu4A",
+  authDomain: "kaimemo-58bad.firebaseapp.com",
+  projectId: "kaimemo-58bad",
+  storageBucket: "kaimemo-58bad.firebasestorage.app",
+  messagingSenderId: "308069117698",
+  appId: "1:308069117698:web:c61a57853abb7e8ffb1c1b"
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+const docRef = db.collection('kyuyo-subs').doc('data');
+
+// ============================================================
 // 共有状態
 // ============================================================
 
 let currentTakehome = null; // null = 未計算
+let SUBS = [];
+let SETTINGS = {};
+let RESULT = {};
 
 // ============================================================
 // 祝日計算
@@ -277,7 +296,7 @@ function searchRoute() {
 // ============================================================
 
 function saveSettings() {
-  const s = {
+  SETTINGS = {
     hourly:      document.getElementById('input-hourly').value,
     dailyHours:  document.getElementById('input-daily-hours').value,
     overtime:    document.getElementById('input-overtime').value,
@@ -285,20 +304,20 @@ function saveSettings() {
     stationTo:   document.getElementById('input-station-to').value,
     commute:     document.getElementById('input-commute-cost').value,
   };
-  localStorage.setItem('kyuyo_settings', JSON.stringify(s));
+  saveAll();
 }
 
 function saveResult() {
   const ids = ['r-base','r-overtime','r-commute','r-gross','r-health','r-pension',
                'r-employment','r-income-tax','r-deduction-total','r-takehome',
                'r-annual-gross','r-annual-takehome'];
-  const r = { takehome: currentTakehome, shown: true };
-  ids.forEach(id => { r[id] = document.getElementById(id).textContent; });
-  localStorage.setItem('kyuyo_result', JSON.stringify(r));
+  RESULT = { takehome: currentTakehome, shown: true };
+  ids.forEach(id => { RESULT[id] = document.getElementById(id).textContent; });
+  saveAll();
 }
 
 function loadResult() {
-  const r = JSON.parse(localStorage.getItem('kyuyo_result') || '{}');
+  const r = RESULT;
   if (!r.shown) return;
   const ids = ['r-base','r-overtime','r-commute','r-gross','r-health','r-pension',
                'r-employment','r-income-tax','r-deduction-total','r-takehome',
@@ -309,7 +328,7 @@ function loadResult() {
 }
 
 function loadSettings() {
-  const s = JSON.parse(localStorage.getItem('kyuyo_settings') || '{}');
+  const s = SETTINGS;
   if (s.hourly)      document.getElementById('input-hourly').value       = s.hourly;
   if (s.dailyHours)  document.getElementById('input-daily-hours').value  = s.dailyHours;
   if (s.overtime)    document.getElementById('input-overtime').value     = s.overtime;
@@ -367,11 +386,16 @@ function updateSortBar() {
 // ============================================================
 
 function loadSubs() {
-  return JSON.parse(localStorage.getItem('subs') || '[]');
+  return SUBS;
 }
 
 function saveSubs(subs) {
-  localStorage.setItem('subs', JSON.stringify(subs));
+  SUBS = subs;
+  saveAll();
+}
+
+function saveAll() {
+  docRef.set({ subs: SUBS, settings: SETTINGS, result: RESULT });
 }
 
 function toMonthly(amount, cycle) {
@@ -533,10 +557,39 @@ function init() {
   yearSel.addEventListener('change', updateWorkingDays);
   monthSel.addEventListener('change', updateWorkingDays);
 
-  loadSettings();
-  loadResult();
   updateWorkingDays();
   renderAll();
 }
 
 init();
+
+// ============================================================
+// Firestore 同期
+// ============================================================
+
+const MIGRATED_KEY = 'kyuyo_subs_migrated';
+if (!localStorage.getItem(MIGRATED_KEY)) {
+  const savedSubs     = localStorage.getItem('subs');
+  const savedSettings = localStorage.getItem('kyuyo_settings');
+  const savedResult   = localStorage.getItem('kyuyo_result');
+  if (savedSubs || savedSettings || savedResult) {
+    docRef.set({
+      subs:     savedSubs     ? JSON.parse(savedSubs)     : [],
+      settings: savedSettings ? JSON.parse(savedSettings) : {},
+      result:   savedResult   ? JSON.parse(savedResult)   : {}
+    });
+  }
+  localStorage.setItem(MIGRATED_KEY, '1');
+}
+
+docRef.onSnapshot(snap => {
+  if (snap.exists) {
+    const d = snap.data();
+    SUBS     = d.subs     || [];
+    SETTINGS = d.settings || {};
+    RESULT   = d.result   || {};
+  }
+  loadSettings();
+  loadResult();
+  renderAll();
+});
