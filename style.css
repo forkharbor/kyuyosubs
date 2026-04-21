@@ -1,0 +1,457 @@
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: 'Segoe UI', 'Hiragino Sans', 'Meiryo', sans-serif;
+  background: #0f1117;
+  color: #d1d9e6;
+  min-height: 100vh;
+}
+
+header {
+  background: #161b27;
+  color: #e0e6f0;
+  padding: 16px 24px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.5);
+  border-bottom: 1px solid #2a3045;
+}
+
+header h1 { font-size: 1.5rem; }
+
+main {
+  max-width: 760px;
+  margin: 24px auto;
+  padding: 0 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.card {
+  background: #1c2133;
+  border-radius: 8px;
+  padding: 20px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+  border: 1px solid #2a3045;
+}
+
+.card h2 {
+  font-size: 1.1rem;
+  margin-bottom: 16px;
+  color: #60a5fa;
+  border-bottom: 2px solid #2a3045;
+  padding-bottom: 8px;
+}
+
+/* ============================================================
+   差引残額カード
+   ============================================================ */
+
+.balance-card {
+  border-color: #2a4070;
+  background: #141e30;
+}
+
+.balance-card h2 {
+  color: #93c5fd;
+  border-color: #2a4070;
+}
+
+.balance-grid {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.balance-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  min-width: 120px;
+}
+
+.balance-label {
+  font-size: 0.8rem;
+  color: #6b7fa0;
+  text-align: center;
+}
+
+.balance-value {
+  font-size: 1.6rem;
+  font-weight: bold;
+  color: #d1d9e6;
+}
+
+.balance-subs {
+  color: #f87171;
+}
+
+.balance-result .balance-value {
+  font-size: 2rem;
+  color: #60a5fa;
+}
+
+.balance-result.negative .balance-value {
+  color: #f87171;
+}
+
+.balance-op {
+  font-size: 1.6rem;
+  color: #4a5568;
+  font-weight: bold;
+  padding-top: 20px;
+}
+
+.balance-note {
+  text-align: center;
+  font-size: 0.78rem;
+  color: #4a5568;
+  margin-top: 12px;
+}
+
+.balance-card.is-negative {
+  border-color: #5a2020;
+  background: #1a1020;
+}
+
+/* ============================================================
+   フォーム
+   ============================================================ */
+
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.form-grid label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.85rem;
+  color: #8a97b0;
+}
+
+.ym-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.ym-row select { flex: 1; }
+.ym-row span { color: #d1d9e6; font-size: 0.9rem; }
+
+input[type="text"],
+input[type="number"],
+input[type="date"],
+select {
+  padding: 8px 10px;
+  border: 1px solid #2a3045;
+  border-radius: 6px;
+  font-size: 0.95rem;
+  width: 100%;
+  outline: none;
+  transition: border-color 0.2s;
+  background: #252d3f;
+  color: #d1d9e6;
+}
+
+input:focus, select:focus { border-color: #60a5fa; }
+
+button {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.95rem;
+  background: #2a3247;
+  color: #c0cce0;
+  transition: background 0.2s;
+  white-space: nowrap;
+}
+
+button:hover { background: #334060; }
+
+.btn-primary {
+  background: #2563eb;
+  color: white;
+  padding: 10px 28px;
+  font-size: 1rem;
+  display: block;
+  margin-bottom: 20px;
+}
+
+.btn-primary:hover { background: #1d4ed8; }
+
+/* ============================================================
+   稼働日数
+   ============================================================ */
+
+.wd-summary {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  margin-bottom: 14px;
+  flex-wrap: wrap;
+}
+
+.wd-item { text-align: center; min-width: 80px; }
+
+.wd-item.highlight .wd-value { color: #60a5fa; font-size: 2rem; }
+.wd-item.highlight .wd-label { color: #93c5fd; }
+
+.wd-label { display: block; font-size: 0.8rem; color: #8a97b0; margin-bottom: 2px; }
+.wd-value { font-size: 1.6rem; font-weight: bold; color: #d1d9e6; }
+.wd-unit  { font-size: 0.9rem; color: #8a97b0; margin-left: 2px; }
+.wd-sep   { font-size: 1.4rem; color: #4a5568; font-weight: bold; }
+
+.holiday-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.holiday-chip {
+  background: #1a2a3a;
+  border: 1px solid #2a4060;
+  border-radius: 4px;
+  padding: 3px 8px;
+  font-size: 0.78rem;
+  color: #93c5fd;
+}
+
+.no-holiday { font-size: 0.8rem; color: #4a5568; }
+
+/* ============================================================
+   定期代
+   ============================================================ */
+
+.commute-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+  margin-top: 12px;
+  flex-wrap: wrap;
+}
+
+.commute-cost-label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.85rem;
+  color: #8a97b0;
+  flex: 1;
+  min-width: 160px;
+}
+
+/* ============================================================
+   給与計算結果
+   ============================================================ */
+
+.result-area { display: none; }
+
+.result-section { margin-bottom: 16px; }
+
+.result-section h3 {
+  font-size: 0.85rem;
+  color: #8a97b0;
+  margin-bottom: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border-bottom: 1px solid #2a3045;
+  padding-bottom: 4px;
+}
+
+.result-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 7px 0;
+  border-bottom: 1px solid #1a2035;
+  font-size: 0.95rem;
+}
+
+.r-label small { font-size: 0.75rem; color: #4a5568; }
+.r-value       { font-weight: bold; color: #d1d9e6; }
+.r-value.deduct { color: #f87171; }
+
+.total-row {
+  background: #1a2035;
+  margin: 0 -4px;
+  padding: 8px 4px;
+  border-radius: 4px;
+  border-bottom: none !important;
+  margin-top: 4px;
+}
+
+.total-row .r-label { font-weight: bold; color: #d1d9e6; }
+.total-row .r-value { font-size: 1.05rem; }
+
+.takehome-box {
+  background: #1a2a4a;
+  border: 1px solid #3a5080;
+  border-radius: 8px;
+  padding: 16px 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 8px;
+}
+
+.takehome-label  { font-size: 0.95rem; color: #8a97b0; }
+.takehome-amount { font-size: 2rem; font-weight: bold; color: #60a5fa; }
+
+.annual-box {
+  margin-top: 12px;
+  background: #12192b;
+  border: 1px solid #2a3a5a;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.annual-title {
+  padding: 8px 20px;
+  font-size: 0.78rem;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  background: #0f1623;
+  border-bottom: 1px solid #1e2a3a;
+}
+
+.annual-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 20px;
+  border-bottom: 1px solid #1a2035;
+}
+
+.annual-row:last-child { border-bottom: none; }
+.annual-label { font-size: 0.9rem; color: #8a97b0; }
+.annual-value { font-size: 1.1rem; font-weight: bold; color: #d1d9e6; }
+.annual-value.highlight { font-size: 1.4rem; color: #60a5fa; }
+
+/* ============================================================
+   サブスク サマリー
+   ============================================================ */
+
+.summary-card-section { text-align: center; }
+
+.total-monthly { font-size: 2.4rem; font-weight: bold; color: #93c5fd; }
+.total-label   { font-size: 1rem; color: #6b7fa0; margin-left: 4px; }
+.total-annual  { font-size: 0.9rem; color: #6b7fa0; margin-top: 6px; }
+.no-data       { color: #4a5568; font-size: 0.9rem; }
+
+/* ============================================================
+   サブスク フォーム
+   ============================================================ */
+
+.form-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.form-row input[type="text"]   { flex: 2; min-width: 130px; }
+.form-row input[type="number"] { flex: 1; min-width: 100px; }
+.form-row select               { flex: 1; min-width: 80px; }
+
+.form-row .btn-primary {
+  display: inline-block;
+  margin-bottom: 0;
+  padding: 8px 20px;
+  font-size: 0.95rem;
+}
+
+/* ============================================================
+   サブスク 一覧
+   ============================================================ */
+
+.section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+  border-bottom: 1px solid #2a3045;
+  padding-bottom: 8px;
+}
+
+.section-header h2 { margin-bottom: 0; border-bottom: none; padding-bottom: 0; }
+
+.sort-bar { display: flex; gap: 6px; }
+
+.btn-sort {
+  padding: 3px 10px;
+  font-size: 0.78rem;
+  background: #252d3f;
+  color: #6b7fa0;
+  border-radius: 4px;
+}
+
+.btn-sort:hover { background: #2e384f; color: #93c5fd; }
+
+.btn-sort.active {
+  background: #1e3a5f;
+  color: #60a5fa;
+  border: 1px solid #2a4a70;
+}
+
+#sub-list { list-style: none; display: flex; flex-direction: column; gap: 6px; }
+
+.sub-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 14px;
+  background: #1a2035;
+  border-radius: 6px;
+  border: 1px solid #2a3045;
+  gap: 10px;
+}
+
+.sub-left  { display: flex; align-items: center; gap: 8px; flex: 1; }
+.sub-name  { font-size: 0.95rem; font-weight: bold; color: #e0e6f0; }
+
+.sub-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.sub-amount  { font-size: 0.95rem; color: #d1d9e6; font-weight: bold; }
+.sub-cycle   { font-size: 0.75rem; padding: 1px 6px; border-radius: 4px; background: #252d3f; color: #8a97b0; }
+.sub-monthly { font-size: 0.8rem; color: #60a5fa; }
+
+.btn-delete       { padding: 4px 10px; font-size: 0.8rem; background: #3b1f1f; color: #f87171; }
+.btn-delete:hover { background: #5a2020; }
+
+.editable { cursor: pointer; border-bottom: 1px dashed transparent; transition: color 0.15s; }
+.editable:hover { border-bottom-color: #3a4a6a; color: #93c5fd; }
+
+.cell-input { padding: 2px 6px; font-size: 0.88rem; border-radius: 4px; width: 110px; }
+
+.empty-message { text-align: center; color: #4a5568; padding: 20px; }
+
+/* ============================================================
+   レスポンシブ
+   ============================================================ */
+
+@media (max-width: 480px) {
+  .form-grid { grid-template-columns: 1fr; }
+  .balance-grid { gap: 8px; }
+  .balance-value { font-size: 1.3rem; }
+  .balance-result .balance-value { font-size: 1.6rem; }
+  .balance-op { font-size: 1.2rem; padding-top: 16px; }
+}

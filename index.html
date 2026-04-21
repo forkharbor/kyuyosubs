@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>給与 × サブスク</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <header>
+    <h1>給与 × サブスク</h1>
+  </header>
+
+  <main>
+
+    <!-- 差引残額サマリー -->
+    <section class="card balance-card">
+      <h2>差引残額</h2>
+      <div class="balance-grid">
+        <div class="balance-item">
+          <span class="balance-label">手取り概算</span>
+          <span class="balance-value" id="b-takehome">--</span>
+        </div>
+        <div class="balance-op">−</div>
+        <div class="balance-item">
+          <span class="balance-label">サブスク/月</span>
+          <span class="balance-value balance-subs" id="b-subs">--</span>
+        </div>
+        <div class="balance-op">=</div>
+        <div class="balance-item balance-result">
+          <span class="balance-label">差引残額</span>
+          <span class="balance-value" id="b-balance">--</span>
+        </div>
+      </div>
+      <p class="balance-note" id="b-note">※ 給与を計算すると残額が表示されます</p>
+    </section>
+
+    <!-- 勤務条件 -->
+    <section class="card">
+      <h2>勤務条件</h2>
+      <div class="form-grid">
+        <label>年月
+          <div class="ym-row">
+            <select id="sel-year"></select><span>年</span>
+            <select id="sel-month"></select><span>月</span>
+          </div>
+        </label>
+        <label>時給（円）
+          <input type="number" id="input-hourly" placeholder="例：1200" min="1">
+        </label>
+        <label>1日の所定労働時間
+          <input type="number" id="input-daily-hours" value="8" min="1" max="24" step="0.5">
+        </label>
+        <label>残業時間（月合計・時間）
+          <input type="number" id="input-overtime" placeholder="例：10" min="0" step="0.5" value="0">
+        </label>
+      </div>
+    </section>
+
+    <!-- 稼働日数 -->
+    <section class="card">
+      <h2>稼働日数</h2>
+      <div class="wd-summary">
+        <div class="wd-item">
+          <span class="wd-label">暦上の平日</span>
+          <span class="wd-value" id="wd-weekdays">--</span>
+          <span class="wd-unit">日</span>
+        </div>
+        <div class="wd-sep">−</div>
+        <div class="wd-item">
+          <span class="wd-label">月内祝日</span>
+          <span class="wd-value" id="wd-holidays">--</span>
+          <span class="wd-unit">日</span>
+        </div>
+        <div class="wd-sep">=</div>
+        <div class="wd-item highlight">
+          <span class="wd-label">稼働日数</span>
+          <span class="wd-value" id="wd-working">--</span>
+          <span class="wd-unit">日</span>
+        </div>
+      </div>
+      <div id="holiday-list" class="holiday-list"></div>
+    </section>
+
+    <!-- 定期代 -->
+    <section class="card">
+      <h2>定期代</h2>
+      <div class="form-grid">
+        <label>最寄り駅
+          <input type="text" id="input-station-from" placeholder="例：渋谷">
+        </label>
+        <label>会社の最寄り駅
+          <input type="text" id="input-station-to" placeholder="例：新宿">
+        </label>
+      </div>
+      <div class="commute-row">
+        <button onclick="searchRoute()">Yahoo乗換案内で検索</button>
+        <label class="commute-cost-label">月額定期代（円）
+          <input type="number" id="input-commute-cost" placeholder="例：8000" min="0" value="0">
+        </label>
+      </div>
+    </section>
+
+    <!-- 給与計算 -->
+    <section class="card">
+      <h2>給与計算</h2>
+      <button class="btn-primary" onclick="calculate()">計算する</button>
+
+      <div id="result" class="result-area">
+        <div class="result-section">
+          <h3>支給</h3>
+          <div class="result-row">
+            <span class="r-label">基本給</span>
+            <span class="r-value" id="r-base">--</span>
+          </div>
+          <div class="result-row">
+            <span class="r-label">残業代 <small>（×1.25）</small></span>
+            <span class="r-value" id="r-overtime">--</span>
+          </div>
+          <div class="result-row">
+            <span class="r-label">交通費</span>
+            <span class="r-value" id="r-commute">--</span>
+          </div>
+          <div class="result-row total-row">
+            <span class="r-label">総支給額</span>
+            <span class="r-value" id="r-gross">--</span>
+          </div>
+        </div>
+
+        <div class="result-section">
+          <h3>控除</h3>
+          <div class="result-row">
+            <span class="r-label">健康保険 <small>（4.99%）</small></span>
+            <span class="r-value deduct" id="r-health">--</span>
+          </div>
+          <div class="result-row">
+            <span class="r-label">厚生年金 <small>（9.15%）</small></span>
+            <span class="r-value deduct" id="r-pension">--</span>
+          </div>
+          <div class="result-row">
+            <span class="r-label">雇用保険 <small>（0.6%）</small></span>
+            <span class="r-value deduct" id="r-employment">--</span>
+          </div>
+          <div class="result-row">
+            <span class="r-label">所得税 <small>（源泉・概算）</small></span>
+            <span class="r-value deduct" id="r-income-tax">--</span>
+          </div>
+          <div class="result-row total-row">
+            <span class="r-label">控除合計</span>
+            <span class="r-value deduct" id="r-deduction-total">--</span>
+          </div>
+        </div>
+
+        <div class="takehome-box">
+          <span class="takehome-label">手取り概算</span>
+          <span class="takehome-amount" id="r-takehome">--</span>
+        </div>
+
+        <div class="annual-box">
+          <div class="annual-title">×12カ月 年収換算</div>
+          <div class="annual-row">
+            <span class="annual-label">年間総支給</span>
+            <span class="annual-value" id="r-annual-gross">--</span>
+          </div>
+          <div class="annual-row">
+            <span class="annual-label">年間手取り概算</span>
+            <span class="annual-value highlight" id="r-annual-takehome">--</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- サブスク サマリー -->
+    <section class="card summary-card-section">
+      <h2>サブスク合計</h2>
+      <div id="summary-total"></div>
+    </section>
+
+    <!-- サブスク 追加 -->
+    <section class="card">
+      <h2>サブスク追加</h2>
+      <div class="form-row">
+        <input type="text" id="input-name" placeholder="サービス名">
+        <input type="number" id="input-amount" placeholder="金額（円）" min="0">
+        <select id="input-cycle">
+          <option value="monthly">月額</option>
+          <option value="annual">年額</option>
+        </select>
+        <button class="btn-primary" onclick="addSub()">追加</button>
+      </div>
+    </section>
+
+    <!-- サブスク 一覧 -->
+    <section class="card">
+      <div class="section-header">
+        <h2>登録済み</h2>
+        <div class="sort-bar">
+          <button class="btn-sort" id="sort-btn-added"  onclick="setSort('added')">追加順</button>
+          <button class="btn-sort" id="sort-btn-name"   onclick="setSort('name')">名前順</button>
+          <button class="btn-sort" id="sort-btn-amount" onclick="setSort('amount')">金額順</button>
+        </div>
+      </div>
+      <ul id="sub-list"></ul>
+      <p id="no-subs" class="empty-message">登録されていません</p>
+    </section>
+
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>
