@@ -342,7 +342,18 @@ function loadSettings() {
 // ============================================================
 
 let sortState = { key: 'added', dir: 'asc' };
+let filterCategory = null;
 const SORT_LABELS = { added: '追加順', name: '名前順', amount: '金額順' };
+
+const CATEGORIES = [
+  { key: 'AI系',        color: '#60a5fa' },
+  { key: '恋愛系',     color: '#f472b6' },
+  { key: 'エンタメ系', color: '#a78bfa' },
+  { key: '音楽系',     color: '#34d399' },
+  { key: '仕事系',     color: '#fbbf24' },
+  { key: '生活系',     color: '#fb923c' },
+  { key: 'その他',     color: '#94a3b8' },
+];
 
 function setSort(key) {
   if (sortState.key === key) {
@@ -381,6 +392,11 @@ function updateSortBar() {
   });
 }
 
+function setFilter(cat) {
+  filterCategory = cat;
+  renderAll();
+}
+
 // ============================================================
 // サブスク：データ操作
 // ============================================================
@@ -417,8 +433,9 @@ function addSub() {
   if (!name)                { alert('サービス名を入力してください'); return; }
   if (!amount || amount < 0){ alert('金額を入力してください');       return; }
 
+  const category = document.getElementById('input-category').value;
   const subs = loadSubs();
-  subs.push({ id: Date.now().toString(), name, amount, cycle });
+  subs.push({ id: Date.now().toString(), name, amount, cycle, category });
   saveSubs(subs);
 
   document.getElementById('input-name').value   = '';
@@ -441,7 +458,10 @@ function startEdit(id, field, el, type = 'text') {
   if (type === 'select') {
     const sel = document.createElement('select');
     sel.className = 'cell-input';
-    [['monthly','月額'],['annual','年額']].forEach(([v, l]) => {
+    const selectOpts = field === 'category'
+      ? CATEGORIES.map(c => [c.key, c.key])
+      : [['monthly','月額'],['annual','年額']];
+    selectOpts.forEach(([v, l]) => {
       const o = document.createElement('option');
       o.value = v; o.textContent = l;
       if (v === sub[field]) o.selected = true;
@@ -490,27 +510,78 @@ function renderAll() {
   const total  = subs.reduce((sum, s) => sum + toMonthly(s.amount, s.cycle), 0);
   const annual = total * 12;
 
-  document.getElementById('summary-total').innerHTML = subs.length === 0
-    ? '<span class="no-data">登録されていません</span>'
-    : `<div class="total-monthly">¥${Math.round(total).toLocaleString()}<span class="total-label">/月</span></div>
-       <div class="total-annual">年間 ¥${Math.round(annual).toLocaleString()}</div>`;
+  // ---- サマリーカード ----
+  if (subs.length === 0) {
+    document.getElementById('summary-total').innerHTML = '<span class="no-data">登録されていません</span>';
+  } else {
+    const catBreakdown = CATEGORIES
+      .map(c => {
+        const t = subs.filter(s => s.category === c.key).reduce((sum, s) => sum + toMonthly(s.amount, s.cycle), 0);
+        return t > 0 ? { ...c, total: t } : null;
+      })
+      .filter(Boolean);
+    const uncatTotal = subs
+      .filter(s => !CATEGORIES.find(c => c.key === s.category))
+      .reduce((sum, s) => sum + toMonthly(s.amount, s.cycle), 0);
 
+    let breakdownHtml = '';
+    if (catBreakdown.length > 0 || uncatTotal > 0) {
+      breakdownHtml = '<div class="cat-breakdown">';
+      catBreakdown.forEach(c => {
+        breakdownHtml += `<div class="cat-breakdown-row"><span class="cat-badge" style="background:${c.color}20;color:${c.color};border-color:${c.color}40">${escapeHtml(c.key)}</span><span class="cat-breakdown-amt">¥${Math.round(c.total).toLocaleString()}/月</span></div>`;
+      });
+      if (uncatTotal > 0) {
+        breakdownHtml += `<div class="cat-breakdown-row"><span class="cat-badge cat-badge-none">未分類</span><span class="cat-breakdown-amt">¥${Math.round(uncatTotal).toLocaleString()}/月</span></div>`;
+      }
+      breakdownHtml += '</div>';
+    }
+
+    document.getElementById('summary-total').innerHTML =
+      `<div class="total-monthly">¥${Math.round(total).toLocaleString()}<span class="total-label">/月</span></div>
+       <div class="total-annual">年間 ¥${Math.round(annual).toLocaleString()}</div>${breakdownHtml}`;
+  }
+
+  // ---- フィルターバー ----
+  const usedCats = new Set(subs.map(s => s.category).filter(c => c && CATEGORIES.find(cat => cat.key === c)));
+  const filterBar = document.getElementById('filter-bar');
+  let filterHtml = `<button class="btn-filter${!filterCategory ? ' active' : ''}" onclick="setFilter(null)">すべて</button>`;
+  CATEGORIES.forEach(c => {
+    if (!usedCats.has(c.key)) return;
+    const isActive = filterCategory === c.key;
+    const activeStyle = isActive ? `background:${c.color}20;color:${c.color};border:1px solid ${c.color}40` : '';
+    filterHtml += `<button class="btn-filter${isActive ? ' active' : ''}" style="${activeStyle}" onclick="setFilter('${escapeHtml(c.key)}')">${escapeHtml(c.key)}</button>`;
+  });
+  filterBar.innerHTML = filterHtml;
+
+  // ---- リスト ----
   updateSortBar();
   const list   = document.getElementById('sub-list');
   const noSubs = document.getElementById('no-subs');
   list.innerHTML = '';
 
-  if (subs.length === 0) { noSubs.style.display = 'block'; return; }
+  const displayed = filterCategory ? subs.filter(s => s.category === filterCategory) : subs;
+
+  if (displayed.length === 0) {
+    noSubs.textContent = subs.length === 0 ? '登録されていません' : 'このカテゴリには登録がありません';
+    noSubs.style.display = 'block';
+    updateBalance();
+    return;
+  }
   noSubs.style.display = 'none';
 
-  getSorted(subs).forEach(s => {
+  getSorted(displayed).forEach(s => {
     const monthly    = toMonthly(s.amount, s.cycle);
     const cycleLabel = s.cycle === 'annual' ? '年額' : '月額';
+    const cat = CATEGORIES.find(c => c.key === s.category);
+    const catStyle = cat ? `background:${cat.color}20;color:${cat.color};border-color:${cat.color}40` : '';
+    const catLabel = cat ? escapeHtml(s.category) : '未分類';
+    const catClass = cat ? 'cat-badge editable' : 'cat-badge cat-badge-none editable';
 
     const li = document.createElement('li');
     li.className = 'sub-item';
     li.innerHTML = `
       <div class="sub-left">
+        <span class="${catClass}" style="${catStyle}" onclick="startEdit('${s.id}','category',this,'select')">${catLabel}</span>
         <span class="sub-name editable" onclick="startEdit('${s.id}','name',this)">${escapeHtml(s.name)}</span>
       </div>
       <div class="sub-right">
@@ -523,7 +594,6 @@ function renderAll() {
     list.appendChild(li);
   });
 
-  // サブスクが変わったら差引残額も更新
   updateBalance();
 }
 

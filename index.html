@@ -191,6 +191,15 @@
           <option value="monthly">月額</option>
           <option value="annual">年額</option>
         </select>
+        <select id="input-category">
+          <option value="AI系">AI系</option>
+          <option value="恋愛系">恋愛系</option>
+          <option value="エンタメ系">エンタメ系</option>
+          <option value="音楽系">音楽系</option>
+          <option value="仕事系">仕事系</option>
+          <option value="生活系">生活系</option>
+          <option value="その他">その他</option>
+        </select>
         <button class="btn-primary" onclick="addSub()">追加</button>
       </div>
     </section>
@@ -205,6 +214,7 @@
           <button class="btn-sort" id="sort-btn-amount" onclick="setSort('amount')">金額順</button>
         </div>
       </div>
+      <div id="filter-bar" class="filter-bar"></div>
       <ul id="sub-list"></ul>
       <p id="no-subs" class="empty-message">登録されていません</p>
     </section>

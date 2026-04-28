@@ -445,6 +445,81 @@ button:hover { background: #334060; }
 .empty-message { text-align: center; color: #4a5568; padding: 20px; }
 
 /* ============================================================
+   カテゴリバッジ
+   ============================================================ */
+
+.cat-badge {
+  font-size: 0.72rem;
+  padding: 2px 8px;
+  border-radius: 10px;
+  border: 1px solid;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+
+.cat-badge:hover { opacity: 0.75; }
+
+.cat-badge-none {
+  background: #252d3f;
+  color: #6b7280;
+  border-color: #3a4560;
+}
+
+/* ============================================================
+   カテゴリフィルターバー
+   ============================================================ */
+
+.filter-bar {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+
+.btn-filter {
+  padding: 3px 12px;
+  font-size: 0.78rem;
+  background: #252d3f;
+  color: #6b7fa0;
+  border-radius: 12px;
+  border: 1px solid transparent;
+}
+
+.btn-filter:hover { background: #2e384f; color: #93c5fd; }
+
+.btn-filter.active {
+  background: #1e3a5f;
+  color: #60a5fa;
+  border-color: #2a4a70;
+}
+
+/* ============================================================
+   サマリー カテゴリ内訳
+   ============================================================ */
+
+.cat-breakdown {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid #2a3045;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  text-align: left;
+}
+
+.cat-breakdown-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.cat-breakdown-amt {
+  font-size: 0.88rem;
+  color: #8a97b0;
+}
+
+/* ============================================================
    レスポンシブ
    ============================================================ */
 
