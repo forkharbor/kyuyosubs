@@ -523,6 +523,63 @@ button:hover { background: #334060; }
    レスポンシブ
    ============================================================ */
 
+@media (max-width: 600px) {
+  main {
+    margin: 16px auto;
+    padding: 0 12px;
+    gap: 16px;
+  }
+
+  .card { padding: 16px; }
+
+  .section-header {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .sort-bar {
+    width: 100%;
+    overflow-x: auto;
+    padding-bottom: 2px;
+  }
+
+  .btn-sort { flex: 0 0 auto; }
+
+  #sub-list { gap: 8px; }
+
+  .sub-item {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 8px;
+    padding: 12px;
+  }
+
+  .sub-left {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .sub-name {
+    min-width: 0;
+    line-height: 1.45;
+    overflow-wrap: anywhere;
+  }
+
+  .sub-right {
+    width: 100%;
+    justify-content: flex-start;
+    gap: 8px;
+  }
+
+  .sub-amount,
+  .sub-cycle,
+  .sub-monthly,
+  .btn-delete {
+    white-space: nowrap;
+  }
+}
+
 @media (max-width: 480px) {
   .form-grid { grid-template-columns: 1fr; }
   .balance-grid { gap: 8px; }
