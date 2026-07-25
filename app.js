@@ -220,7 +220,7 @@ function calculate() {
   document.getElementById('r-income-tax').textContent       = '−' + fmt(incomeTax);
   document.getElementById('r-deduction-total').textContent  = '−' + fmt(deductTotal);
   document.getElementById('r-takehome').textContent         = fmt(takehome);
-  document.getElementById('r-annual-gross').textContent     = fmt(gross * 12);
+  document.getElementById('r-annual-gross').textContent     = fmt(earningBase * 12);
   document.getElementById('r-annual-takehome').textContent  = fmt(takehome * 12);
 
   document.getElementById('result').style.display = 'block';
