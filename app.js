@@ -146,89 +146,115 @@ function updateWorkingDays() {
 }
 
 // ============================================================
-// 所得税計算（源泉・概算）
+// 所得税計算（2026年・甲欄の電算機計算の特例）
+// 国税庁 https://www.nta.go.jp/publication/pamph/gensen/zeigakuhyo2026/data/all.pdf p.18
+// A は非課税交通費を除いた給与から社会保険料等を控除した月額。
+// 復興特別所得税を含む。給与所得控除は円未満切上げ、税額は10円単位四捨五入。
 // ============================================================
 
-function calcIncomeTax(annualGrossForTax, annualSocialInsurance) {
-  let kyuyoKojo;
-  const a = annualGrossForTax;
-  if (a <= 1625000)      kyuyoKojo = 550000;
-  else if (a <= 1800000) kyuyoKojo = Math.floor(a * 0.4) - 100000;
-  else if (a <= 3600000) kyuyoKojo = Math.floor(a * 0.3) + 80000;
-  else if (a <= 6600000) kyuyoKojo = Math.floor(a * 0.2) + 440000;
-  else if (a <= 8500000) kyuyoKojo = Math.floor(a * 0.1) + 1100000;
-  else                   kyuyoKojo = 1950000;
-
-  const kiso    = 480000;
-  const taxable = Math.max(0, a - kyuyoKojo - annualSocialInsurance - kiso);
-
-  let annualTax;
-  if (taxable <= 1950000)       annualTax = taxable * 0.05;
-  else if (taxable <= 3300000)  annualTax = taxable * 0.10 - 97500;
-  else if (taxable <= 6950000)  annualTax = taxable * 0.20 - 427500;
-  else if (taxable <= 9000000)  annualTax = taxable * 0.23 - 636000;
-  else if (taxable <= 18000000) annualTax = taxable * 0.33 - 1536000;
-  else if (taxable <= 40000000) annualTax = taxable * 0.40 - 2796000;
-  else                          annualTax = taxable * 0.45 - 4796000;
-
-  annualTax = Math.max(0, annualTax) * 1.021;
-  return Math.floor(annualTax / 12);
+const PAYROLL_VERSION = '2026-10-payslip-v1';
+function calcIncomeTax(a, dependents = 0) {
+  a = Math.max(0, a);
+  const salaryDeduction = Math.ceil(a <= 158333 ? 54167 :
+    a <= 299999 ? a * 0.3 + 6667 : a <= 549999 ? a * 0.2 + 36667 :
+    a <= 708330 ? a * 0.1 + 91667 : 162500);
+  const basicDeduction = a <= 2120833 ? 48334 : a <= 2162499 ? 40000 :
+    a <= 2204166 ? 26667 : a <= 2245833 ? 13334 : 0;
+  const b = Math.max(0, a - salaryDeduction - basicDeduction - 31667 * dependents);
+  const tax = b <= 162500 ? b * 0.05105 : b <= 275000 ? b * 0.10210 - 8296 :
+    b <= 579166 ? b * 0.20420 - 36374 : b <= 750000 ? b * 0.23483 - 54113 :
+    b <= 1500000 ? b * 0.33693 - 130688 : b <= 3333333 ? b * 0.40840 - 237893 :
+    b * 0.45945 - 408061;
+  return Math.max(0, Math.round(tax / 10) * 10);
 }
 
-// ============================================================
-// 給与計算
-// ============================================================
-
-function calculate() {
-  const year       = parseInt(document.getElementById('sel-year').value);
-  const month      = parseInt(document.getElementById('sel-month').value);
-  const hourly     = parseFloat(document.getElementById('input-hourly').value) || 0;
-  const dailyHours = parseFloat(document.getElementById('input-daily-hours').value) || 8;
-  const overtime   = parseFloat(document.getElementById('input-overtime').value) || 0;
-  const commute    = parseFloat(document.getElementById('input-commute-cost').value) || 0;
-
-  if (!hourly || hourly <= 0) {
-    alert('時給を入力してください');
-    return;
+function parseHours(value) {
+  const text = String(value).trim();
+  if (!text) return 0;
+  // コロン区切りは時:分。小数表記は従来どおり十進時間。
+  if (/^\d+:\d{2}$/.test(text)) {
+    const [h, m] = text.split(':').map(Number);
+    if (m < 60) return h + m / 60;
+  } else if (/^\d+(\.\d+)?$/.test(text)) {
+    return Number(text);
   }
+  throw new Error('時間は「10:30」（10時間30分）または「10.5」で入力してください。');
+}
 
-  const { working } = getWorkingDaysInfo(year, month);
+function computePayroll(p) {
+  const base = Math.round(p.hourly * p.regularHours);
+  const overtimePay = Math.round(p.hourly * 1.25 * p.overtime);
+  const nightPay = Math.round(p.hourly * 1.5 * p.nightOvertime);
+  const earningBase = base + overtimePay + nightPay + p.adjustment;
+  const gross = earningBase + p.commute;
+  // 明細の雇用保険の計算に合わせ、非課税通勤費も含めて円未満切捨て。
+  const employment = Math.floor(Math.max(0, gross) * p.employmentRate / 100 + 1e-9);
+  const socialTotal = p.health + p.pension + employment;
+  const incomeTax = p.incomeTaxOverride ?? calcIncomeTax(earningBase - socialTotal, p.dependents);
+  const deductTotal = socialTotal + incomeTax + p.residentTax + p.otherDeduction;
+  return { base, overtimePay, nightPay, earningBase, gross, health: p.health,
+    pension: p.pension, employment, incomeTax, residentTax: p.residentTax,
+    otherDeduction: p.otherDeduction, adjustment: p.adjustment, commute: p.commute,
+    deductTotal, takehome: gross - deductTotal };
+}
 
-  const base        = Math.round(hourly * dailyHours * working);
-  const overtimePay = Math.round(hourly * 1.25 * overtime);
-  const earningBase = base + overtimePay;
-  const gross       = earningBase + commute;
-
-  const health      = Math.round(earningBase * 0.0499);
-  const pension     = Math.round(Math.min(earningBase, 650000) * 0.0915);
-  const employment  = Math.round(earningBase * 0.006);
-  const socialTotal = health + pension + employment;
-
-  const incomeTax   = calcIncomeTax(earningBase * 12, socialTotal * 12);
-  const deductTotal = socialTotal + incomeTax;
-  const takehome    = gross - deductTotal;
-
-  const fmt = n => n.toLocaleString() + '円';
-
-  document.getElementById('r-base').textContent             = fmt(base);
-  document.getElementById('r-overtime').textContent         = fmt(overtimePay);
-  document.getElementById('r-commute').textContent          = fmt(commute);
-  document.getElementById('r-gross').textContent            = fmt(gross);
-  document.getElementById('r-health').textContent           = '−' + fmt(health);
-  document.getElementById('r-pension').textContent          = '−' + fmt(pension);
-  document.getElementById('r-employment').textContent       = '−' + fmt(employment);
-  document.getElementById('r-income-tax').textContent       = '−' + fmt(incomeTax);
-  document.getElementById('r-deduction-total').textContent  = '−' + fmt(deductTotal);
-  document.getElementById('r-takehome').textContent         = fmt(takehome);
-  document.getElementById('r-annual-gross').textContent     = fmt(earningBase * 12);
-  document.getElementById('r-annual-takehome').textContent  = fmt(takehome * 12);
-
-  document.getElementById('result').style.display = 'block';
-
-  currentTakehome = takehome;
-  updateBalance();
-  saveSettings();
-  saveResult();
+function calculate(persist = true) {
+  try {
+    const value = id => document.getElementById(id).value.trim();
+    const number = (id, fallback = 0) => {
+      const raw = value(id);
+      const n = raw === '' ? fallback : Number(raw);
+      if (!Number.isFinite(n) || n < 0) throw new Error('金額・人数・料率には0以上の数値を入力してください。');
+      return n;
+    };
+    const year = number('sel-year');
+    const month = number('sel-month');
+    const hourly = number('input-hourly');
+    const dailyHours = number('input-daily-hours');
+    if (!hourly || !dailyHours || dailyHours > 24) throw new Error('時給と1日の所定労働時間（24時間以内）を入力してください。');
+    if (value('input-health') === '' || value('input-pension') === '') {
+      throw new Error('健康保険・厚生年金には給与明細の控除額を入力してください（加入なしは0）。');
+    }
+    const taxYear = number('input-tax-year');
+    if (taxYear !== 2026 && value('input-income-tax') === '') {
+      throw new Error('自動所得税は2026年支払分に対応しています。他の年は所得税の明細額を入力してください。');
+    }
+    const dependents = number('input-dependents');
+    if (!Number.isInteger(dependents)) throw new Error('扶養親族等の数は整数で入力してください。');
+    const adjustment = Number(value('input-adjustment') || 0);
+    if (!Number.isFinite(adjustment)) throw new Error('課税調整を数値で入力してください。');
+    const { working } = getWorkingDaysInfo(year, month);
+    const r = computePayroll({ hourly,
+      regularHours: value('input-regular-hours') === '' ? dailyHours * working : parseHours(value('input-regular-hours')),
+      overtime: parseHours(value('input-overtime')),
+      nightOvertime: parseHours(value('input-night-overtime')), adjustment,
+      commute: number('input-commute-cost'), health: number('input-health'), pension: number('input-pension'),
+      employmentRate: number('input-employment-rate'), dependents,
+      incomeTaxOverride: value('input-income-tax') === '' ? null : number('input-income-tax'),
+      residentTax: number('input-resident-tax'), otherDeduction: number('input-other-deduction') });
+    const fmt = n => n.toLocaleString('ja-JP') + '円';
+    const fields = { base: 'base', overtime: 'overtimePay', night: 'nightPay', adjustment: 'adjustment',
+      commute: 'commute', gross: 'gross', health: 'health', pension: 'pension', employment: 'employment',
+      'income-tax': 'incomeTax', 'resident-tax': 'residentTax', 'other-deduction': 'otherDeduction',
+      'deduction-total': 'deductTotal', takehome: 'takehome' };
+    Object.entries(fields).forEach(([id, key]) => {
+      const deduct = ['health','pension','employment','incomeTax','residentTax','otherDeduction','deductTotal'].includes(key);
+      document.getElementById('r-' + id).textContent = (deduct ? '−' : '') + fmt(r[key]);
+    });
+    document.getElementById('r-annual-gross').textContent = fmt(r.earningBase * 12);
+    document.getElementById('r-annual-takehome').textContent = fmt(r.takehome * 12);
+    document.getElementById('result').style.display = 'block';
+    document.getElementById('calculation-error').textContent = '';
+    currentTakehome = r.takehome;
+    updateBalance();
+    if (persist) { saveSettings(); saveResult(); }
+  } catch (e) {
+    document.getElementById('calculation-error').textContent = e.message;
+    document.getElementById('result').style.display = 'none';
+    currentTakehome = null;
+    if (persist) { RESULT = {}; saveAll(); }
+    updateBalance();
+  }
 }
 
 // ============================================================
@@ -295,6 +321,9 @@ function searchRoute() {
 // 設定の保存・読み込み（給与）
 // ============================================================
 
+const PAYROLL_INPUTS = ['regular-hours', 'night-overtime', 'adjustment', 'health', 'pension',
+  'employment-rate', 'dependents', 'income-tax', 'resident-tax', 'other-deduction', 'tax-year'];
+
 function saveSettings() {
   SETTINGS = {
     hourly:      document.getElementById('input-hourly').value,
@@ -304,22 +333,29 @@ function saveSettings() {
     stationTo:   document.getElementById('input-station-to').value,
     commute:     document.getElementById('input-commute-cost').value,
   };
+  PAYROLL_INPUTS.forEach(key => { SETTINGS[key] = document.getElementById('input-' + key).value; });
+  SETTINGS.year = document.getElementById('sel-year').value;
+  SETTINGS.month = document.getElementById('sel-month').value;
   saveAll();
 }
 
 function saveResult() {
-  const ids = ['r-base','r-overtime','r-commute','r-gross','r-health','r-pension',
+  const ids = ['r-base','r-overtime','r-night','r-adjustment','r-resident-tax','r-other-deduction','r-commute','r-gross','r-health','r-pension',
                'r-employment','r-income-tax','r-deduction-total','r-takehome',
                'r-annual-gross','r-annual-takehome'];
-  RESULT = { takehome: currentTakehome, shown: true };
+  RESULT = { takehome: currentTakehome, shown: true, version: PAYROLL_VERSION };
   ids.forEach(id => { RESULT[id] = document.getElementById(id).textContent; });
   saveAll();
 }
 
 function loadResult() {
   const r = RESULT;
-  if (!r.shown) return;
-  const ids = ['r-base','r-overtime','r-commute','r-gross','r-health','r-pension',
+  if (!r.shown || r.version !== PAYROLL_VERSION) {
+    document.getElementById('result').style.display = 'none';
+    currentTakehome = null;
+    return;
+  }
+  const ids = ['r-base','r-overtime','r-night','r-adjustment','r-resident-tax','r-other-deduction','r-commute','r-gross','r-health','r-pension',
                'r-employment','r-income-tax','r-deduction-total','r-takehome',
                'r-annual-gross','r-annual-takehome'];
   ids.forEach(id => { document.getElementById(id).textContent = r[id] || '--'; });
@@ -329,12 +365,18 @@ function loadResult() {
 
 function loadSettings() {
   const s = SETTINGS;
+  PAYROLL_INPUTS.forEach(key => {
+    if (s[key] !== undefined) document.getElementById('input-' + key).value = s[key];
+  });
+  if (s.year) document.getElementById('sel-year').value = s.year;
+  if (s.month) document.getElementById('sel-month').value = s.month;
+  updateWorkingDays();
   if (s.hourly)      document.getElementById('input-hourly').value       = s.hourly;
   if (s.dailyHours)  document.getElementById('input-daily-hours').value  = s.dailyHours;
-  if (s.overtime)    document.getElementById('input-overtime').value     = s.overtime;
+  if (s.overtime !== undefined)    document.getElementById('input-overtime').value     = s.overtime;
   if (s.stationFrom) document.getElementById('input-station-from').value = s.stationFrom;
   if (s.stationTo)   document.getElementById('input-station-to').value   = s.stationTo;
-  if (s.commute)     document.getElementById('input-commute-cost').value = s.commute;
+  if (s.commute !== undefined)     document.getElementById('input-commute-cost').value = s.commute;
 }
 
 // ============================================================
@@ -626,7 +668,20 @@ function init() {
 
   yearSel.addEventListener('change', updateWorkingDays);
   monthSel.addEventListener('change', updateWorkingDays);
+  // 入力を変更した後に、以前の手取りを現条件の結果として表示しない。
+  const invalidateResult = () => {
+    currentTakehome = null;
+    RESULT = {};
+    document.getElementById('result').style.display = 'none';
+    document.getElementById('calculation-error').textContent = '';
+    updateBalance();
+  };
+  document.querySelectorAll('.form-grid input, .form-grid select, #input-commute-cost').forEach(el => {
+    el.addEventListener('input', invalidateResult);
+    el.addEventListener('change', invalidateResult);
+  });
 
+  document.getElementById('input-tax-year').value = currentYear;
   updateWorkingDays();
   renderAll();
 }

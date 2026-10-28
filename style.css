@@ -767,3 +767,17 @@ button:hover,
 .btn-delete:hover {
   background: #ffd5dd;
 }
+
+.payroll-note { color: #60839a; font-size: .78rem; line-height: 1.7; margin-top: 10px; overflow-wrap: anywhere; }
+.payroll-note a { color: #2385ba; }
+.payroll-error { color: #b52646; font-size: .85rem; line-height: 1.6; margin-bottom: 12px; }
+.form-grid > label { min-width: 0; }
+.r-label { min-width: 0; overflow-wrap: anywhere; }
+.r-value { flex-shrink: 0; margin-left: 10px; }
+@media (max-width: 480px) {
+  .result-row { align-items: flex-start; font-size: .86rem; }
+  .r-label small { display: block; }
+  .annual-row { gap: 8px; padding: 10px 12px; }
+  .annual-label { font-size: .78rem; }
+  .annual-value { font-size: 1rem; white-space: nowrap; }
+}
