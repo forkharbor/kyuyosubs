@@ -152,7 +152,13 @@ function updateWorkingDays() {
 // 復興特別所得税を含む。給与所得控除は円未満切上げ、税額は10円単位四捨五入。
 // ============================================================
 
-const PAYROLL_VERSION = '2026-10-payslip-v1';
+const PAYROLL_VERSION = '2026-10-payslip-auto-v2';
+// 添付された2026年8月支払明細を次回以降の概算の基準にする。
+// 健康保険・厚生年金は当月給与に比例させず、明細の月額を継続適用。
+const PAYSLIP_BASIS = Object.freeze({
+  health: 14112, pension: 25620, employmentRate: 0.5, dependents: 0,
+  residentTax: 0, otherDeduction: 0
+});
 function calcIncomeTax(a, dependents = 0) {
   a = Math.max(0, a);
   const salaryDeduction = Math.ceil(a <= 158333 ? 54167 :
@@ -188,13 +194,14 @@ function computePayroll(p) {
   const earningBase = base + overtimePay + nightPay + p.adjustment;
   const gross = earningBase + p.commute;
   // 明細の雇用保険の計算に合わせ、非課税通勤費も含めて円未満切捨て。
-  const employment = Math.floor(Math.max(0, gross) * p.employmentRate / 100 + 1e-9);
-  const socialTotal = p.health + p.pension + employment;
-  const incomeTax = p.incomeTaxOverride ?? calcIncomeTax(earningBase - socialTotal, p.dependents);
-  const deductTotal = socialTotal + incomeTax + p.residentTax + p.otherDeduction;
-  return { base, overtimePay, nightPay, earningBase, gross, health: p.health,
-    pension: p.pension, employment, incomeTax, residentTax: p.residentTax,
-    otherDeduction: p.otherDeduction, adjustment: p.adjustment, commute: p.commute,
+  const employment = Math.floor(Math.max(0, gross) * PAYSLIP_BASIS.employmentRate / 100 + 1e-9);
+  const { health, pension, dependents, residentTax, otherDeduction } = PAYSLIP_BASIS;
+  const socialTotal = health + pension + employment;
+  const incomeTax = calcIncomeTax(earningBase - socialTotal, dependents);
+  const deductTotal = socialTotal + incomeTax + residentTax + otherDeduction;
+  return { base, overtimePay, nightPay, earningBase, gross, health,
+    pension, employment, incomeTax, residentTax,
+    otherDeduction, adjustment: p.adjustment, commute: p.commute,
     deductTotal, takehome: gross - deductTotal };
 }
 
@@ -212,15 +219,6 @@ function calculate(persist = true) {
     const hourly = number('input-hourly');
     const dailyHours = number('input-daily-hours');
     if (!hourly || !dailyHours || dailyHours > 24) throw new Error('時給と1日の所定労働時間（24時間以内）を入力してください。');
-    if (value('input-health') === '' || value('input-pension') === '') {
-      throw new Error('健康保険・厚生年金には給与明細の控除額を入力してください（加入なしは0）。');
-    }
-    const taxYear = number('input-tax-year');
-    if (taxYear !== 2026 && value('input-income-tax') === '') {
-      throw new Error('自動所得税は2026年支払分に対応しています。他の年は所得税の明細額を入力してください。');
-    }
-    const dependents = number('input-dependents');
-    if (!Number.isInteger(dependents)) throw new Error('扶養親族等の数は整数で入力してください。');
     const adjustment = Number(value('input-adjustment') || 0);
     if (!Number.isFinite(adjustment)) throw new Error('課税調整を数値で入力してください。');
     const { working } = getWorkingDaysInfo(year, month);
@@ -228,14 +226,11 @@ function calculate(persist = true) {
       regularHours: value('input-regular-hours') === '' ? dailyHours * working : parseHours(value('input-regular-hours')),
       overtime: parseHours(value('input-overtime')),
       nightOvertime: parseHours(value('input-night-overtime')), adjustment,
-      commute: number('input-commute-cost'), health: number('input-health'), pension: number('input-pension'),
-      employmentRate: number('input-employment-rate'), dependents,
-      incomeTaxOverride: value('input-income-tax') === '' ? null : number('input-income-tax'),
-      residentTax: number('input-resident-tax'), otherDeduction: number('input-other-deduction') });
+      commute: number('input-commute-cost') });
     const fmt = n => n.toLocaleString('ja-JP') + '円';
     const fields = { base: 'base', overtime: 'overtimePay', night: 'nightPay', adjustment: 'adjustment',
       commute: 'commute', gross: 'gross', health: 'health', pension: 'pension', employment: 'employment',
-      'income-tax': 'incomeTax', 'resident-tax': 'residentTax', 'other-deduction': 'otherDeduction',
+      'income-tax': 'incomeTax',
       'deduction-total': 'deductTotal', takehome: 'takehome' };
     Object.entries(fields).forEach(([id, key]) => {
       const deduct = ['health','pension','employment','incomeTax','residentTax','otherDeduction','deductTotal'].includes(key);
@@ -321,8 +316,7 @@ function searchRoute() {
 // 設定の保存・読み込み（給与）
 // ============================================================
 
-const PAYROLL_INPUTS = ['regular-hours', 'night-overtime', 'adjustment', 'health', 'pension',
-  'employment-rate', 'dependents', 'income-tax', 'resident-tax', 'other-deduction', 'tax-year'];
+const PAYROLL_INPUTS = ['regular-hours', 'night-overtime', 'adjustment'];
 
 function saveSettings() {
   SETTINGS = {
@@ -340,7 +334,7 @@ function saveSettings() {
 }
 
 function saveResult() {
-  const ids = ['r-base','r-overtime','r-night','r-adjustment','r-resident-tax','r-other-deduction','r-commute','r-gross','r-health','r-pension',
+  const ids = ['r-base','r-overtime','r-night','r-adjustment','r-commute','r-gross','r-health','r-pension',
                'r-employment','r-income-tax','r-deduction-total','r-takehome',
                'r-annual-gross','r-annual-takehome'];
   RESULT = { takehome: currentTakehome, shown: true, version: PAYROLL_VERSION };
@@ -355,7 +349,7 @@ function loadResult() {
     currentTakehome = null;
     return;
   }
-  const ids = ['r-base','r-overtime','r-night','r-adjustment','r-resident-tax','r-other-deduction','r-commute','r-gross','r-health','r-pension',
+  const ids = ['r-base','r-overtime','r-night','r-adjustment','r-commute','r-gross','r-health','r-pension',
                'r-employment','r-income-tax','r-deduction-total','r-takehome',
                'r-annual-gross','r-annual-takehome'];
   ids.forEach(id => { document.getElementById(id).textContent = r[id] || '--'; });
@@ -681,7 +675,6 @@ function init() {
     el.addEventListener('change', invalidateResult);
   });
 
-  document.getElementById('input-tax-year').value = currentYear;
   updateWorkingDays();
   renderAll();
 }

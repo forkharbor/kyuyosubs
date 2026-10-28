@@ -5,7 +5,7 @@
   <link rel="icon" type="image/png" href="logo.png">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>給与 × サブスク</title>
-  <link rel="stylesheet" href="style.css?v=20261028-payslip-v1">
+  <link rel="stylesheet" href="style.css?v=20261028-payslip-auto-v2">
   <!-- Firebase SDK -->
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
@@ -51,7 +51,7 @@
           </div>
         </label>
         <label>時給（円）
-          <input type="number" id="input-hourly" placeholder="例：1200" min="1">
+          <input type="number" id="input-hourly" placeholder="例：2600" min="1" value="2600">
         </label>
         <label>1日の所定労働時間
           <input type="number" id="input-daily-hours" value="8" min="1" max="24" step="0.5">
@@ -111,47 +111,15 @@
       <div class="commute-row">
         <button onclick="searchRoute()">Yahoo乗換案内で検索</button>
         <label class="commute-cost-label">月額定期代（円）
-          <input type="number" id="input-commute-cost" placeholder="例：8000" min="0" value="0">
+          <input type="number" id="input-commute-cost" placeholder="例：17750" min="0" value="17750">
         </label>
       </div>
-    </section>
-
-    <section class="card">
-      <h2>控除の設定</h2>
-      <div class="form-grid">
-        <label>健康保険（支援金・介護保険を含む明細額・円）
-          <input type="number" id="input-health" min="0" step="1" placeholder="給与明細の控除額" required>
-        </label>
-        <label>厚生年金（明細額・円）
-          <input type="number" id="input-pension" min="0" step="1" placeholder="給与明細の控除額" required>
-        </label>
-        <label>雇用保険の本人負担率（%）
-          <input type="number" id="input-employment-rate" min="0" max="100" step="0.01" value="0.5">
-        </label>
-        <label>給与の支払年（勤務年と異なる場合は変更）
-          <input type="number" id="input-tax-year" min="2020" max="2100" step="1" value="2026">
-        </label>
-        <label>扶養親族等の数（甲欄）
-          <input type="number" id="input-dependents" min="0" step="1" value="0">
-        </label>
-        <label>所得税の明細額（空欄で自動計算・円）
-          <input type="number" id="input-income-tax" min="0" step="1" placeholder="空欄：2026年の甲欄で計算">
-        </label>
-        <label>住民税（明細にある場合・円）
-          <input type="number" id="input-resident-tax" min="0" step="1" value="0">
-        </label>
-        <label>その他の控除（円）
-          <input type="number" id="input-other-deduction" min="0" step="1" value="0">
-        </label>
-      </div>
-      <p class="payroll-note">健康保険・厚生年金は標準報酬月額などで決まるため、直近の明細額を入力します（加入なしは0）。雇用保険は通勤費を含む総支給額×料率を、明細に合わせ1円未満切捨て。0.5%は2026年度の一般の事業の本人負担率です。</p>
-      <p class="payroll-note">自動所得税は2026年支払分の甲欄・電算機計算の特例（復興特別所得税込み）。他の支払年・乙欄・税の調整がある月は明細額を入力してください。通勤費は非課税の範囲内として計算します。</p>
-      <p class="payroll-note"><a href="https://www.nta.go.jp/publication/pamph/gensen/zeigakuhyo2026/01.htm" target="_blank" rel="noopener">国税庁の2026年源泉徴収税額表</a> ／ <a href="https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/0000108634.html" target="_blank" rel="noopener">厚生労働省の雇用保険料率</a></p>
     </section>
 
     <!-- 給与計算 -->
     <section class="card">
       <h2>給与計算</h2>
+      <p class="payroll-note">控除は添付明細を基準に自動計算します。健康保険・厚生年金は同額を継続し、雇用保険・所得税は給与額に応じて計算します（2026年の条件による概算）。</p>
       <button class="btn-primary" onclick="calculate()">計算する</button>
 
       <p id="calculation-error" class="payroll-error" role="alert"></p>
@@ -181,23 +149,21 @@
         <div class="result-section">
           <h3>控除</h3>
           <div class="result-row">
-            <span class="r-label">健康保険 <small>（明細額）</small></span>
+            <span class="r-label">健康保険 <small>（明細基準・固定）</small></span>
             <span class="r-value deduct" id="r-health">--</span>
           </div>
           <div class="result-row">
-            <span class="r-label">厚生年金 <small>（明細額）</small></span>
+            <span class="r-label">厚生年金 <small>（明細基準・固定）</small></span>
             <span class="r-value deduct" id="r-pension">--</span>
           </div>
           <div class="result-row">
-            <span class="r-label">雇用保険 <small>（総支給額×設定料率）</small></span>
+            <span class="r-label">雇用保険 <small>（総支給額×0.5%）</small></span>
             <span class="r-value deduct" id="r-employment">--</span>
           </div>
           <div class="result-row">
             <span class="r-label">所得税 <small>（源泉）</small></span>
             <span class="r-value deduct" id="r-income-tax">--</span>
           </div>
-          <div class="result-row"><span class="r-label">住民税</span><span class="r-value deduct" id="r-resident-tax">--</span></div>
-          <div class="result-row"><span class="r-label">その他の控除</span><span class="r-value deduct" id="r-other-deduction">--</span></div>
           <div class="result-row total-row">
             <span class="r-label">控除合計</span>
             <span class="r-value deduct" id="r-deduction-total">--</span>
@@ -269,6 +235,6 @@
 
   </main>
 
-  <script src="app.js?v=20261028-payslip-v1"></script>
+  <script src="app.js?v=20261028-payslip-auto-v2"></script>
 </body>
 </html>
