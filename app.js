@@ -317,11 +317,13 @@ function searchRoute() {
 // ============================================================
 
 const PAYROLL_INPUTS = ['regular-hours', 'night-overtime', 'adjustment'];
+const DAILY_HOURS_DEFAULT_VERSION = '8h-v1';
 
 function saveSettings() {
   SETTINGS = {
     hourly:      document.getElementById('input-hourly').value,
     dailyHours:  document.getElementById('input-daily-hours').value,
+    dailyHoursDefaultVersion: DAILY_HOURS_DEFAULT_VERSION,
     overtime:    document.getElementById('input-overtime').value,
     stationFrom: document.getElementById('input-station-from').value,
     stationTo:   document.getElementById('input-station-to').value,
@@ -359,6 +361,13 @@ function loadResult() {
 
 function loadSettings() {
   const s = SETTINGS;
+  // 古い保存値（9時間など）も一度8時間に揃える。
+  // 移行後に利用者が変更した値は、通常どおり保存・復元する。
+  if (s.dailyHoursDefaultVersion !== DAILY_HOURS_DEFAULT_VERSION) {
+    if (s.dailyHours && Number(s.dailyHours) !== 8) RESULT = {};
+    s.dailyHours = '8';
+    s.dailyHoursDefaultVersion = DAILY_HOURS_DEFAULT_VERSION;
+  }
   PAYROLL_INPUTS.forEach(key => {
     if (s[key] !== undefined) document.getElementById('input-' + key).value = s[key];
   });
@@ -366,7 +375,7 @@ function loadSettings() {
   if (s.month) document.getElementById('sel-month').value = s.month;
   updateWorkingDays();
   if (s.hourly)      document.getElementById('input-hourly').value       = s.hourly;
-  if (s.dailyHours)  document.getElementById('input-daily-hours').value  = s.dailyHours;
+  document.getElementById('input-daily-hours').value = s.dailyHours || '8';
   if (s.overtime !== undefined)    document.getElementById('input-overtime').value     = s.overtime;
   if (s.stationFrom) document.getElementById('input-station-from').value = s.stationFrom;
   if (s.stationTo)   document.getElementById('input-station-to').value   = s.stationTo;
